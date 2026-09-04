@@ -7,16 +7,17 @@
 
 ### System Designer Name
 
-[Enter your name.]
+Keanu Widjaja
 
 
 ### System Name
 
-[Use a default name "HackTrack" or enter the name you choose for the system.]
+HackForecast
 
 ### System Goal
-[Read Chapter 2 Section 2.1, then enter the well-structured goal of your agentic system]
+
+For CPVC organizers, the agent should improve accuracy in recording attendance, which would then lead to an improved accuracy in providing food and beverages, thus keeping the club budget from being wasted. The agent should measure this by seeing if the percentage accuracy for attendance forecast moves from the +- 50% of actual attendance to +- 15% of actual attendance, given the baseline of 40% attendance to registration rate. The agent should avoid excessive communication and collecting unnecessary personal data and instead should focus on the communications at one lightweight confirmation and at most one reminder.
 
 ### Who Is Better Off When This Works?
 
-[In one complete sentence, identify who will be better off when the system works.]
+The club will be better off when this works because it will keep their budget from being wasted on unnecessary food, drinks, and swag.
