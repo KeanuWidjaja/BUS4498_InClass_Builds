@@ -8,15 +8,18 @@ This workflow supports the system goal defined in `my_first_agent/README.md`.
 
 ### 1.2 Workflow Trigger
 
-[Describe the event, request, schedule, or condition that starts the workflow.]
+The workflow begins when a CPVC organizer provides information about an upcoming event, including the event date, registration count, and available historical attendance information. The workflow may also be triggered shortly before the event when updated registration or confirmation information becomes available.
 
 ### 1.3 Completion Condition at Runtime
 
-[Describe how the system knows, on any given run, that this workflow is completed.]
+The workflow is complete when VibePrep provides an attendance estimate, an uncertainty range, and recommended quantities of food, drinks, and swag, and a CPVC organizer reviews and approves or modifies the recommendations.
 
 ### 1.4 General Workflow
 
 [Describe the overall sequence of tasks in one or two paragraphs. Explain the normal path first, followed by the most important exception paths and human-review points.]
+VibePrep first gathers aggregate event information and, if appropriate, sends participants one lightweight attendance confirmation with no more than one reminder. It then estimates attendance using registration totals, the previous 40% attendance-to-registration rate, historical event data, and available aggregate confirmations.
+
+The agent converts the attendance estimate into supply recommendations and explains its assumptions. If the data is limited or the forecast is uncertain, the agent clearly identifies the uncertainty and sends the recommendation to an organizer for review. After the event, organizers may enter actual attendance and supply outcomes so VibePrep can evaluate forecast accuracy and improve future estimates.
 
 ### 1.5 Workflow Diagram
 
