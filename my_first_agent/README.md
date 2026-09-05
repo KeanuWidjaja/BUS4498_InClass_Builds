@@ -16,7 +16,7 @@ HackForecast
 
 ### System Goal
 
-For CPVC organizers, the agent should improve accuracy in recording attendance, which would then lead to an improved accuracy in providing food and beverages, thus keeping the club budget from being wasted. The agent should measure this by seeing if the percentage accuracy for attendance forecast moves from the +- 50% of actual attendance to +- 15% of actual attendance, given the baseline of 40% attendance to registration rate. The agent should avoid excessive communication and collecting unnecessary personal data and instead should focus on the communications at one lightweight confirmation and at most one reminder.
+For CPVC organizers, improve hackathon attendance forecasts to support accurate food, beverage, and swag planning and reduce budget waste, measured by forecast error improving from ±50% to ±15% of actual attendance using the previous event’s 40% attendance-to-registration rate as the baseline, without collecting unnecessary personal data or sending more than one lightweight confirmation and one reminder.
 
 ### Who Is Better Off When This Works?
 
