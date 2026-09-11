@@ -16,7 +16,6 @@ The workflow is complete when VibePrep provides an attendance estimate, an uncer
 
 ### 1.4 General Workflow
 
-[Describe the overall sequence of tasks in one or two paragraphs. Explain the normal path first, followed by the most important exception paths and human-review points.]
 VibePrep first gathers aggregate event information and, if appropriate, sends participants one lightweight attendance confirmation with no more than one reminder. It then estimates attendance using registration totals, the previous 40% attendance-to-registration rate, historical event data, and available aggregate confirmations.
 
 The agent converts the attendance estimate into supply recommendations and explains its assumptions. If the data is limited or the forecast is uncertain, the agent clearly identifies the uncertainty and sends the recommendation to an organizer for review. After the event, organizers may enter actual attendance and supply outcomes so VibePrep can evaluate forecast accuracy and improve future estimates.
@@ -27,10 +26,22 @@ The agent converts the attendance estimate into supply recommendations and expla
 
 ```mermaid
 flowchart TD
-    T1["T1: First task"] --> T2["T2: Second task"]
-    T2 --> D1{"Decision condition?"}
-    D1 -->|Yes| T3["T3: Next task"]
-    D1 -->|No| H1["Human review"]
-    H1 --> T3
-    T3 --> C1([C1: Completion state])
+    S1["Trigger: CPVC organizer provides event information"] --> T1["T1: Estimate attendance"]
+    S2["Trigger: Updated registration or confirmation information becomes available"] --> T1
+    T1 --> T2["T2: Recommend food, drink, and swag quantities"]
+    T2 --> T3["T3: Explain recommendation assumptions"]
+    T3 --> D1{"Is data limited or forecast uncertain?"}
+    D1 -->|Yes| T4["T4: Identify forecast uncertainty"]
+    T4 --> T5["T5: Send recommendation to organizer"]
+    D1 -->|No| T5
+    T5 --> T6["T6: Review recommendations"]
+    T6 --> D2{"Does organizer approve or modify recommendations?"}
+    D2 -->|Approve| C1(["C1: Workflow complete"])
+    D2 -->|Modify| C1
+    C1 --> D3{"Are actual attendance and supply outcomes entered?"}
+    D3 -->|Yes| T7["T7: Enter actual attendance and supply outcomes"]
+    T7 --> T8["T8: Evaluate forecast accuracy"]
+    T8 --> T9["T9: Improve future estimates"]
+    T9 --> T1
+    D3 -->|No| C2(["C2: Post-event follow-up stops"])
 ```
