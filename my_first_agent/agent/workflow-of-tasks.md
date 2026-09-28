@@ -42,6 +42,5 @@ flowchart TD
     D3 -->|Yes| T7["T7: Enter actual attendance and supply outcomes"]
     T7 --> T8["T8: Evaluate forecast accuracy"]
     T8 --> T9["T9: Improve future estimates"]
-    T9 --> T1
-    D3 -->|No| C2(["C2: Post-event follow-up stops"])
+    T9 --> C2(["C2: Post-event evaluation complete"])
 ```
