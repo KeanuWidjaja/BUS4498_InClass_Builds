@@ -23,8 +23,14 @@ On inference failure or exhausted limits: Record the unresolved status and hand 
 ### Input 1
 
 - **Input name:** Forecast accuracy evaluation
-- **What it contains:** The forecast accuracy results produced by T8: Evaluate forecast accuracy.
+- **What it contains:** T8’s comparison of predicted attendance with actual attendance, including the forecast error and the direction and size of the error.
 - **Source:** T8: Evaluate forecast accuracy.
+
+### Input 2
+
+- **Input name:** Current attendance-estimation guidance
+- **What it contains:** The current rule or baseline used to estimate attendance, including the 40% attendance-to-registration rate and any existing adjustment guidance used by T1.
+- **Source:** The current future-estimation guidance record used by T1.
 
 ## 3. Tool Permissions and Boundaries
 
@@ -51,40 +57,40 @@ On inference failure or exhausted limits: Record the unresolved status and hand 
 ### Permitted Subtask 1
 
 - **Subtask name:** Review forecast accuracy
-- **Subtask description:** Examine the forecast accuracy evaluation from T8 and identify whether the previous attendance estimate was higher or lower than actual attendance.
-- **Subtask boundary:** May use only the forecast accuracy evaluation provided by T8. May not collect new personal data or change the current event’s approved recommendations.
-- **Retry limits:** May be attempted twice. If the evaluation is missing or unusable after two attempts, hand off to a CPVC organizer.
+- **Subtask description:** Examine T8’s predicted attendance, actual attendance, forecast error, and current attendance-estimation guidance. Produce an intermediate finding describing whether the estimate was above or below actual attendance and how large the error was.
+- **Subtask boundary:** May use only the T8 evaluation and current estimation guidance. May not change the current event’s approved recommendations or collect new personal data.
+- **Retry limits:** May be attempted twice. If the required evidence is missing or unusable after two attempts, hand off to a CPVC organizer.
 
 ### Permitted Subtask 2
 
-- **Subtask name:** Identify estimate adjustment
-- **Subtask description:** Use the forecast accuracy finding to determine whether future attendance estimates should be adjusted.
-- **Subtask boundary:** May propose an adjustment to future attendance estimates. May not change food, drink, or swag recommendations for the current event.
-- **Retry limits:** May be attempted twice. If the appropriate adjustment remains unclear, hand off to a CPVC organizer.
+- **Subtask name:** Determine estimate adjustment
+- **Subtask description:** Compare the forecast error with the current estimation guidance. If the error is within ±15% of actual attendance, determine that no adjustment is needed. If the error exceeds ±15%, propose changing the attendance-estimation guidance in the direction and amount indicated by the observed attendance-to-registration result.
+- **Subtask boundary:** May propose an adjustment to future attendance-estimation guidance. May not change the current event’s approved food, drink, or swag recommendations. If the evidence does not support a specific adjustment, hand off to a CPVC organizer.
+- **Retry limits:** May be attempted twice. If the adjustment remains unsupported after two attempts, hand off to a CPVC organizer.
 
 ### Permitted Subtask 3
 
-- **Subtask name:** Update Future Estimate
-- **Subtask description:** Apply the supported adjustment, or record that no adjustment is needed, so future attendance estimates can improve.
-- **Subtask boundary:** May update future estimation guidance using the T8 evaluation. May not override organizer-approved plans or use information outside the workflow.
-- **Retry limits:** May be attempted twice. If the update cannot be completed, hand off to a CPVC organizer.
+- **Subtask name:** Save and verify guidance
+- **Subtask description:** Save the approved adjustment, or the finding that no adjustment is needed, in the future-estimation guidance record used by T1. Read the saved guidance back and verify that it matches the intended result.
+- **Subtask boundary:** May update only the future-estimation guidance record. May not override organizer-approved plans or change unrelated workflow information. If the saved result cannot be verified, hand off to a CPVC organizer.
+- **Retry limits:** May be attempted twice. Before retrying, check whether the intended update was already saved to avoid creating a duplicate or conflicting record.
 
 - **Decision guidance:** After each subtask, use its findings to select the permitted subtask most likely to resolve the most important remaining uncertainty. Do not follow a fixed sequence. If no permitted subtask can make useful progress, stop and hand the case to a person.
 
 ## 5. When to Stop or Hand Off to a Human
 
-- **Stop successfully when:** The forecast accuracy evaluation from T8 has been reviewed and HackForecast has either recorded a supported adjustment for future attendance estimates or documented that no adjustment is needed. The result is available for future use by T1.
-- **Hand off early when:** The T8 evaluation is missing, incomplete, conflicting, or insufficient to support an adjustment; the permitted retries are exhausted; or the request requires changing the current event’s approved recommendations.
-- **Hand off to:** CPVC Organizer
+- **Stop successfully when:** T9 has reviewed the complete T8 evaluation and current estimation guidance, determined whether an adjustment is needed, saved the revised guidance or recorded that no adjustment is needed, and verified that the saved guidance matches the intended result.
+- **Hand off early when:** The T8 evaluation or current estimation guidance is missing, incomplete, or conflicting; the evidence does not support a specific adjustment; the guidance cannot be saved or verified; or the permitted retries are exhausted.
+- **Hand off to:** A CPVC organizer.
 
 Stop at the first applicable budget limit or handoff condition. While awaiting review, take no further autonomous action.
 
 ## 6. Outbound Deliverable
 
 - **Status:** Completed or escalated to human.
-- **Result or recommendation:** Updated future estimate guidance or a documented decision that no adjustment is needed.
-- **Evidence summary:** The most important evidence supporting the result or explaining why no result could be reached.
-- **Subtasks performed:** Permitted subtasks completed, including repeated attempts.
-- **Unresolved issues:** Remaining uncertainties or questions; use none only if no unresolved issue remains.
-- **Handoff note:** Reason for stopping, unresolved questions, and what the reviewer needs to decide; write "Not applicable" for a completed task.
-- **Next task or recipient:** Who receives the completed output? Unresolved cases go to the handoff recipient above.
+- **Result or recommendation:** State whether the future attendance-estimation guidance was updated or whether no adjustment was needed. If updated, report the revised guidance and the reason for the change. If escalated, write undetermined.
+- **Evidence summary:** Summarize T8’s predicted attendance, actual attendance, forecast error, current estimation guidance, and the criteria used to determine whether an adjustment was needed.
+- **Subtasks performed:** Review forecast accuracy, determine estimate adjustment, and save and verify guidance, including repeated attempts.
+- **Unresolved issues:** State any missing, conflicting, or insufficient evidence. Write none only if no unresolved issue remains.
+- **Handoff note:** For a completed task, write Not applicable. For an escalation, explain what evidence was missing or why the adjustment could not be verified and what the CPVC organizer must decide.
+- **Next task or recipient:** T1: Estimate attendance receives the saved future-estimation guidance for a later forecast. Unresolved cases go to a CPVC organizer.
