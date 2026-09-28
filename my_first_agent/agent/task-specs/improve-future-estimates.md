@@ -7,11 +7,11 @@ task_name: "Improve Future Estimates"
 task_owner: "HackForecast"
 
 # Agent Inference Configuration
-Provider: [e.g., Groq, OpenAI, Claude, Google Gemini]
-Model: "[Exact supported API model ID.]"
-Role: [permitted subtasks the model supports]
-Maximum inference requests per task run: "[Whole-number limit.]"
-On inference failure or exhausted limits: Record the unresolved status and hand the case to [human role].
+Provider: Claude
+Model: "claude-opus-5-5"
+Role: Review forecast accuracy, identify estimate adjustments, and update future attendance estimates. Unresolved cases go to a CPVC organizer.
+Maximum inference requests per task run: 6
+On inference failure or exhausted limits: Record the unresolved status and hand the case to a CPVC organizer.
 ```
 
 ## 1. Task Goal
@@ -28,6 +28,24 @@ On inference failure or exhausted limits: Record the unresolved status and hand 
 
 ## 3. Tool Permissions and Boundaries
 
+### Task-Wide Limits
+
+- **Total task timeout:** 10 minutes, including tool calls, retries, and waiting.
+- **Maximum tool calls:** 3
+
+### Tool 1
+
+- **Tool name:** `record_future_estimate_guidance`
+- **Input:** Forecast accuracy evaluation
+- **Output:** Updated future estimate guidance
+- **Implementation Route:** File operations
+- **Integration approach:** Direct integration
+- **Role in this task:** Support the permitted subtask **Update Future Estimate** by recording the supported adjustment or documenting that no adjustment is needed.
+- **Task timeout:** 10 minutes
+- **Maximum retries:** 2
+- **Retry only when:** The first attempt fails before confirmation that the result was recorded. Before retrying, check whether the update was already recorded to avoid creating a duplicate. Do not retry when the forecast accuracy evaluation is missing, incomplete, conflicting, or insufficient.
+- **On timeout, exhausted retries, or an error that cannot be retried:** Record the unresolved status and hand the case to a CPVC organizer. Do not continue as if the update succeeded.
+  
 ## 4. How the Agent Should Reason
 
 ### Permitted Subtask 1
@@ -64,7 +82,7 @@ Stop at the first applicable budget limit or handoff condition. While awaiting r
 ## 6. Outbound Deliverable
 
 - **Status:** Completed or escalated to human.
-- **Result or recommendation:** The completed result. If escalated before reaching a supported result, write undetermined.
+- **Result or recommendation:** Updated future estimate guidance or a documented decision that no adjustment is needed.
 - **Evidence summary:** The most important evidence supporting the result or explaining why no result could be reached.
 - **Subtasks performed:** Permitted subtasks completed, including repeated attempts.
 - **Unresolved issues:** Remaining uncertainties or questions; use none only if no unresolved issue remains.
