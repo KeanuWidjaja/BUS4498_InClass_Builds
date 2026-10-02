@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Icon Crate</title>
+  <meta name="description" content="Type a keyword and Claude packs the most relevant cute icons into a wooden crate.">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📦</text></svg>">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="glow glow-a" aria-hidden="true"></div>
+  <div class="glow glow-b" aria-hidden="true"></div>
+
+  <main class="page">
+    <header class="masthead">
+      <h1><span class="logo" aria-hidden="true">📦</span> <span class="title-text">Icon Crate</span></h1>
+      <p class="tagline">Name a vibe. Claude packs the cutest matching icons into the crate, best match first.</p>
+      <p id="mode" class="mode" hidden></p>
+    </header>
+
+    <form id="search" class="search" role="search" autocomplete="off">
+      <label for="keyword" class="visually-hidden">Keyword</label>
+      <input id="keyword" name="keyword" type="search" maxlength="80"
+             placeholder="Try “ocean”, “cozy winter”, “birthday party”…" required>
+      <button id="go" type="submit">
+        <span class="go-label">Search</span>
+        <span class="spinner" aria-hidden="true"></span>
+      </button>
+    </form>
+
+    <div class="suggestions" aria-label="Sample searches">
+      <span class="suggestions-label">Try:</span>
+      <button type="button" class="chip">ocean</button>
+      <button type="button" class="chip">cozy winter</button>
+      <button type="button" class="chip">birthday party</button>
+      <button type="button" class="chip">spooky</button>
+      <button type="button" class="chip">garden</button>
+      <button type="button" class="chip">outer space</button>
+    </div>
+
+    <p id="notice" class="notice" role="status" hidden></p>
+
+    <section class="crate-wrap" aria-labelledby="crate-title">
+      <h2 id="crate-title" class="visually-hidden">Matching icons</h2>
+      <div id="crate" class="crate" data-state="idle">
+        <div class="crate-bed">
+          <ol id="crate-slots" class="crate-slots" aria-label="Matches, most relevant first"></ol>
+          <div class="crate-message" aria-hidden="false">
+            <p class="msg msg-idle"><span aria-hidden="true">✨</span> The crate is empty. Search for something to fill it!</p>
+            <p class="msg msg-loading"><span class="bounce" aria-hidden="true">🔍</span> Rummaging for matches…</p>
+            <p class="msg msg-empty"><span aria-hidden="true">🙈</span> Nothing in the pile matches <strong id="empty-keyword"></strong>. Try another word or a sample search.</p>
+          </div>
+        </div>
+      </div>
+      <p id="status" class="status" aria-live="polite"></p>
+    </section>
+
+    <section class="pile-wrap" aria-labelledby="pile-title">
+      <h2 id="pile-title" class="pile-title">The pile <span id="pile-count" class="count"></span></h2>
+      <ul id="pile" class="pile"></ul>
+    </section>
+  </main>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>

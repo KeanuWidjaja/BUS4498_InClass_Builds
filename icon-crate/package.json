@@ -1,0 +1,16 @@
+{
+  "name": "icon-crate",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Sort cute icons into a crate by relevance using Claude",
+  "type": "module",
+  "scripts": {
+    "start": "node server.mjs"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.131.0"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
