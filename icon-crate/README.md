@@ -16,7 +16,7 @@ npm install
 
 ### Add your Claude API key
 
-Create a folder named `api_keys` at the repository root (next to `icon-crate/`) or inside `icon-crate/`. Put a file in it named `CLAUDE_API_KEY.txt` (or `CLAUDE.txt`) that contains your Anthropic API key, either on its own or as `ANTHROPIC_API_KEY = "sk-ant-..."`:
+Create a folder named `api_keys` at the repository root (next to `icon-crate/`) or inside `icon-crate/`. Put a file in it named `CLAUDE_API_KEY.txt` or `CLAUDE.txt` (any capitalization, e.g. `claude.txt`) that contains your Anthropic API key, either on its own or as `ANTHROPIC_API_KEY = "sk-ant-..."`:
 
 ```
 BUS4498_InClass_Builds/

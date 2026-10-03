@@ -34,7 +34,16 @@ let keySource = null;
 function getClient() {
   if (client) return client;
   for (const dir of KEY_DIRS) {
-    for (const file of KEY_FILES) {
+    let names;
+    try {
+      names = fs.readdirSync(dir);
+    } catch {
+      continue;
+    }
+    for (const wanted of KEY_FILES) {
+      // Match the file name case-insensitively, so claude.txt works too.
+      const file = names.find((name) => name.toLowerCase() === wanted.toLowerCase());
+      if (!file) continue;
       const full = path.join(dir, file);
       let key;
       try {
