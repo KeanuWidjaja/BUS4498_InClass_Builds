@@ -20,6 +20,12 @@ const KEY_FILES = ["CLAUDE_API_KEY.txt", "CLAUDE.txt"];
 const ICON_IDS = ICONS.map((icon) => icon.id);
 const ICON_ID_SET = new Set(ICON_IDS);
 
+// Accepts a bare key, or a line like ANTHROPIC_API_KEY = "sk-ant-...".
+function parseKeyFile(text) {
+  const assigned = text.match(/^\s*(?:export\s+)?[A-Z_]+\s*[=:]\s*["']?([^"'\s]+)["']?\s*$/m);
+  return (assigned ? assigned[1] : text).trim();
+}
+
 let client = null;
 let keySource = null;
 
@@ -32,7 +38,7 @@ function getClient() {
       const full = path.join(dir, file);
       let key;
       try {
-        key = fs.readFileSync(full, "utf8").trim();
+        key = parseKeyFile(fs.readFileSync(full, "utf8"));
       } catch {
         continue;
       }
