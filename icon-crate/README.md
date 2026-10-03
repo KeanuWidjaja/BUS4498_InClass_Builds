@@ -21,7 +21,7 @@ Create a folder named `api_keys` at the repository root (next to `icon-crate/`) 
 ```
 BUS4498_InClass_Builds/
 ├── api_keys/
-│   └── CLAUDE_API_KEY.txt   ← your key, nothing else
+│   └── CLAUDE_API_KEY.txt   ← your API key
 └── icon-crate/
 ```
 
