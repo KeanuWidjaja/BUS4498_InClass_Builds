@@ -29,6 +29,10 @@ BUS4498_InClass_Builds/
 
 ## Run
 
+**Windows, easiest:** double-click `start.bat` in the `icon-crate` folder. It installs dependencies the first time, starts the server, and opens the page. Keep its window open while you use the app.
+
+**Any system, from a terminal in the `icon-crate` folder:**
+
 ```bash
 npm start
 ```
