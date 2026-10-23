@@ -5,10 +5,13 @@
   const config = window.EVENT_RADAR_CONFIG;
   const db = window.supabase.createClient(config.supabaseUrl, config.publishableKey);
   const agentUrl = `${config.supabaseUrl}/functions/v1/submit-event`;
+  // Flyers are shown only when they come from this project's flyers bucket.
+  const flyerPrefix = `${config.supabaseUrl}/storage/v1/object/public/flyers/`;
+  const MAX_FLYER_BYTES = 5 * 1024 * 1024;
 
   // Only the columns the website is allowed to read.
   const COLUMNS = "id, created_at, status, title, club, event_date, start_time, end_time, " +
-    "place_name, place_detail, cost, free_food, summary";
+    "place_name, place_detail, cost, free_food, summary, flyer_url";
 
   const RESULT_LABELS = {
     published: "Published",
@@ -20,6 +23,7 @@
 
   const form = document.getElementById("post-form");
   const textarea = document.getElementById("announcement");
+  const flyerInput = document.getElementById("flyer");
   const postButton = document.getElementById("post-button");
   const result = document.getElementById("result");
   const board = document.getElementById("board");
@@ -106,6 +110,14 @@
     if (tags.childElementCount > 0) body.append(tags);
 
     li.append(body);
+
+    if (event.flyer_url && event.flyer_url.startsWith(flyerPrefix)) {
+      const img = el("img", "flyer");
+      img.src = event.flyer_url;
+      img.alt = `Flyer for ${event.title || "this event"}`;
+      img.loading = "lazy";
+      li.append(img);
+    }
     return li;
   }
 
@@ -162,12 +174,22 @@
       showResult("error", "Please write your announcement first.", []);
       return;
     }
+    const flyer = flyerInput.files[0];
+    if (flyer && !["image/jpeg", "image/png"].includes(flyer.type)) {
+      showResult("error", "The photo must be a JPG or PNG.", []);
+      return;
+    }
+    if (flyer && flyer.size > MAX_FLYER_BYTES) {
+      showResult("error", "The photo is too big. Please use a JPG or PNG up to 5 MB.", []);
+      return;
+    }
 
     postButton.disabled = true;
     postButton.textContent = "Checking your post…";
     try {
       const body = new FormData();
       body.append("announcement", text);
+      if (flyer) body.append("flyer", flyer);
       const response = await fetch(agentUrl, {
         method: "POST",
         headers: { apikey: config.publishableKey },
@@ -180,8 +202,11 @@
         return;
       }
       showResult(answer.status, answer.message, answer.reasons);
-      if (answer.status === "published") {
+      if (answer.status === "published" || answer.status === "waiting") {
         textarea.value = "";
+        flyerInput.value = "";
+      }
+      if (answer.status === "published") {
         await loadEvents();
       }
     } catch (err) {
