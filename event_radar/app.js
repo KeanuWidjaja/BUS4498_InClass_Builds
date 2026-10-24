@@ -30,6 +30,14 @@
   const refreshButton = document.getElementById("refresh");
   const chips = document.querySelectorAll(".chip");
 
+  const signInForm = document.getElementById("sign-in-form");
+  const signInButton = document.getElementById("sign-in-button");
+  const signInMessage = document.getElementById("sign-in-message");
+  const modPanel = document.getElementById("mod-panel");
+  const modWho = document.getElementById("mod-who");
+  const signOutButton = document.getElementById("sign-out");
+  const waitingBoard = document.getElementById("waiting-board");
+
   let events = [];
   let filter = "all";
 
@@ -218,7 +226,103 @@
     }
   }
 
+  // ---------- moderators ----------
+
+  let moderatorEmail = "";
+
+  function reviewCard(event) {
+    const li = eventCard(event);
+    const review = el("div", "review");
+    review.append(el("p", "why", event.status_reason || "Waiting for a moderator."));
+    if (event.note_for_moderator) review.append(el("p", "", `Note from the agent: ${event.note_for_moderator}`));
+    review.append(el("p", "original", event.announcement));
+
+    const actions = el("p", "actions");
+    const approve = el("button", "", "Approve");
+    const reject = el("button", "ghost", "Reject");
+    approve.type = "button";
+    reject.type = "button";
+    approve.addEventListener("click", () => reviewPost(event.id, "published", [approve, reject]));
+    reject.addEventListener("click", () => reviewPost(event.id, "rejected", [approve, reject]));
+    actions.append(approve, reject);
+    review.append(actions);
+
+    li.querySelector(".event-body").append(review);
+    return li;
+  }
+
+  async function loadWaiting() {
+    const { data, error } = await db
+      .from("events")
+      .select("*")
+      .eq("status", "waiting")
+      .order("created_at", { ascending: true });
+
+    waitingBoard.replaceChildren();
+    if (error) {
+      console.error(error);
+      waitingBoard.append(el("li", "empty", "Couldn't load waiting posts."));
+      return;
+    }
+    if (!data || data.length === 0) {
+      waitingBoard.append(el("li", "empty", "No posts are waiting."));
+      return;
+    }
+    for (const event of data) waitingBoard.append(reviewCard(event));
+  }
+
+  async function reviewPost(id, status, buttons) {
+    for (const button of buttons) button.disabled = true;
+    const { error } = await db
+      .from("events")
+      .update({ status, reviewed_at: new Date().toISOString(), reviewed_by: moderatorEmail })
+      .eq("id", id);
+    if (error) {
+      console.error(error);
+      for (const button of buttons) button.disabled = false;
+      alert("Couldn't save that. Please try again.");
+      return;
+    }
+    await Promise.all([loadWaiting(), loadEvents()]);
+  }
+
+  function showModerator(session) {
+    moderatorEmail = session?.user?.email || "";
+    signInForm.hidden = Boolean(session);
+    modPanel.hidden = !session;
+    if (session) {
+      modWho.textContent = `Signed in as ${moderatorEmail}`;
+      loadWaiting();
+    } else {
+      waitingBoard.replaceChildren();
+    }
+  }
+
+  async function signIn(submitEvent) {
+    submitEvent.preventDefault();
+    signInButton.disabled = true;
+    signInMessage.hidden = true;
+    const { error } = await db.auth.signInWithPassword({
+      email: document.getElementById("mod-email").value.trim(),
+      password: document.getElementById("mod-password").value,
+    });
+    signInButton.disabled = false;
+    if (error) {
+      signInMessage.textContent = "That email and password didn't work.";
+      signInMessage.hidden = false;
+      return;
+    }
+    document.getElementById("mod-password").value = "";
+  }
+
   // ---------- wire it up ----------
+
+  signInForm.addEventListener("submit", signIn);
+  signOutButton.addEventListener("click", () => db.auth.signOut());
+  db.auth.onAuthStateChange((_event, session) => {
+    // Run outside the auth callback, as supabase-js recommends.
+    setTimeout(() => showModerator(session), 0);
+  });
 
   form.addEventListener("submit", sendPost);
   refreshButton.addEventListener("click", loadEvents);
