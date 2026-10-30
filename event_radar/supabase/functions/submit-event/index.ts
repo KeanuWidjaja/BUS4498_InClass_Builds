@@ -1,6 +1,7 @@
 // Stage 5: the AI agent (Supabase Edge Function "submit-event").
 // It reads a club announcement, asks the AI to fill in an event card,
 // lets the code decide the status, and saves the post in public.events.
+// Stage 14: posts also arrive from the chat-channel reader, once per chat message.
 
 import { createClient } from "npm:@supabase/supabase-js@2.117.2";
 import Anthropic from "npm:@anthropic-ai/sdk@0.131.0";
@@ -287,11 +288,36 @@ async function askOpenAI(key: string, announcement: string, flyer: Flyer | null)
   throw new Error("OpenAI gave no answer.");
 }
 
-async function readPost(req: Request): Promise<{ announcement: string; file: File | null }> {
+type Post = {
+  announcement: string;
+  file: File | null;
+  // Stage 14: where a chat post came from. Empty for posts from the website.
+  source: string;
+  source_id: string;
+  source_name: string;
+  // The sender's earlier chat messages. Accepted now; the agent reads them from Stage 12 on.
+  thread: string[];
+};
+
+function shortText(value: unknown, max: number): string {
+  return typeof value === "string" ? value.trim().slice(0, max) : "";
+}
+
+async function readPost(req: Request): Promise<Post> {
+  const empty = { source: "", source_id: "", source_name: "", thread: [] };
   const type = req.headers.get("content-type") ?? "";
   if (type.includes("application/json")) {
     const body = await req.json().catch(() => ({}));
-    return { announcement: String(body?.announcement ?? ""), file: null };
+    return {
+      announcement: String(body?.announcement ?? ""),
+      file: null,
+      source: shortText(body?.source, 40),
+      source_id: shortText(body?.source_id, 100),
+      source_name: shortText(body?.source_name, 100),
+      thread: Array.isArray(body?.thread)
+        ? body.thread.filter((t: unknown) => typeof t === "string").slice(-4).map((t: string) => t.slice(0, 500))
+        : [],
+    };
   }
   if (type.includes("form")) {
     const form = await req.formData();
@@ -299,10 +325,33 @@ async function readPost(req: Request): Promise<{ announcement: string; file: Fil
     return {
       announcement: String(form.get("announcement") ?? ""),
       file: flyer instanceof File && flyer.size > 0 ? flyer : null,
+      ...empty,
     };
   }
-  return { announcement: "", file: null };
+  return { announcement: "", file: null, ...empty };
 }
+
+// Stage 14: has this chat message already been decided? (One decision per message.)
+async function alreadyRead(db: ReturnType<typeof createClient>, post: Post): Promise<boolean> {
+  if (!post.source || !post.source_id) return false;
+  const { data, error } = await db
+    .from("events")
+    .select("id")
+    .eq("source", post.source)
+    .eq("source_id", post.source_id)
+    .limit(1);
+  if (error) throw error;
+  return (data ?? []).length > 0;
+}
+
+const ALREADY_READ = {
+  ok: true,
+  status: "duplicate",
+  already_read: true,
+  message: "This chat message was already read. The agent decides each message only once.",
+  reasons: [],
+  event: {},
+};
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS_HEADERS });
@@ -343,13 +392,16 @@ Deno.serve(async (req) => {
       flyer = { ...kind, bytes };
     }
 
-    if (!ai.provider) {
-      return json({ ok: false, message: "The agent has no AI key yet, so it can't read posts." }, 503);
-    }
-
     const db = createClient(Deno.env.get("SUPABASE_URL") ?? "", secretKey(), {
       auth: { persistSession: false },
     });
+
+    // A chat message the agent already decided gets no second decision and no AI call.
+    if (await alreadyRead(db, post)) return json(ALREADY_READ);
+
+    if (!ai.provider) {
+      return json({ ok: false, message: "The agent has no AI key yet, so it can't read posts." }, 503);
+    }
 
     // Spending limit: at most DAILY_LIMIT new posts in 24 hours.
     const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
@@ -442,12 +494,17 @@ Deno.serve(async (req) => {
         note_for_moderator: card.note_for_moderator ?? "",
         dedupe_key: dedupeKey,
         ai_model: ai.model,
+        source: post.source,
+        source_id: post.source_id,
+        source_name: post.source_name,
       })
       .select(eventColumns)
       .single();
 
     if (insertError) {
       if (insertError.code === "23505") {
+        // Two runs read the same chat message at once: the unique index caught the second one.
+        if (await alreadyRead(db, post)) return json(ALREADY_READ);
         return json({
           ok: true,
           status: "duplicate",
