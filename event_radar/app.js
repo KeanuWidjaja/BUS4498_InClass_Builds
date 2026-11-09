@@ -185,9 +185,9 @@
   document.addEventListener("visibilitychange", function () { if (document.visibilityState === "visible") loadBoard(true); });
 
   /* ---------- posting by hand: send it to the AI agent ---------- */
-  var LABELS = { published: "Published", waiting: "Waiting for a moderator", rejected: "Not posted", duplicate: "Already posted", error: "Something went wrong" };
+  var LABELS = { published: "Published", waiting: "Waiting for a moderator", rejected: "Not posted", duplicate: "Already posted", paused: "The agent is paused", limit: "Daily limit reached", error: "Something went wrong" };
   function showResult(data) {
-    var box = $("postResult"), kind = data.ok ? data.status : "error";
+    var box = $("postResult"), kind = data.ok || data.status === "limit" ? data.status : "error";
     box.hidden = false;
     box.className = "result " + kind;
     box.textContent = "";
@@ -216,7 +216,8 @@
       })
       .then(function (data) {
         showResult(data);
-        if (data.ok) { form.reset(); loadBoard(true); }
+        // Paused: keep the text, so the post can be sent again once the agent is back.
+        if (data.ok && data.status !== "paused") { form.reset(); loadBoard(true); }
       })
       .catch(function () { showResult({ ok: false, message: "Couldn't reach the agent. Check your internet connection and the Project URL in config.js." }); })
       .then(function () { btn.disabled = false; btn.textContent = "Post it"; });
@@ -244,6 +245,7 @@
       $("modWho").textContent = session.user.email;
       loadWaiting();
       loadLessons();
+      loadPermissions();
     }
   }
   function review(ev, status) {
@@ -385,6 +387,98 @@
     if (!text) return;
     saveLesson(text, null).then(function () { $("lessonText").value = ""; });
   });
+
+  /* ---------- permissions: the switches and numbers the agent reads on every post ---------- */
+  function shownValue(p) { return p.kind === "switch" ? (p.value === 1 ? "On" : "Off") : String(p.value); }
+  function stamp(iso) {
+    return new Date(iso).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+  }
+  // A change needs a reason typed first, and is saved under the signed-in moderator's email.
+  function savePermission(p, value, reasonInput, undo) {
+    var reason = reasonInput.value.trim();
+    if (reason.length < 3) {
+      $("permissionsStatus").textContent = "Type a reason for changing “" + p.label + "” first.";
+      reasonInput.focus();
+      if (undo) undo();
+      return;
+    }
+    db.from("agent_permissions")
+      .update({ value: value, reason: reason.slice(0, 300), changed_by: session.user.email, updated_at: new Date().toISOString() })
+      .eq("key", p.key)
+      .then(function (res) {
+        if (res.error) {
+          $("permissionsStatus").textContent = "Couldn't change “" + p.label + "”: " + res.error.message;
+          if (undo) undo();
+          return;
+        }
+        toast("“" + p.label + "” is now " + shownValue({ kind: p.kind, value: value }));
+        loadPermissions();
+      });
+  }
+  function loadPermissions() {
+    $("permissionsStatus").textContent = "Loading…";
+    db.from("agent_permissions").select("*").order("sort", { ascending: true })
+      .then(function (res) {
+        var list = $("permissionsList");
+        list.textContent = "";
+        if (res.error) { $("permissionsStatus").textContent = "Couldn't load the permissions: " + res.error.message; return; }
+        res.data.forEach(function (p) {
+          var li = el("li", "lesson" + (p.kind === "switch" && p.value !== 1 ? " off" : ""));
+          var reasonInput = el("input");
+          reasonInput.type = "text"; reasonInput.maxLength = 300;
+          reasonInput.placeholder = "Why are you changing it? (needed first)";
+
+          if (p.kind === "switch") {
+            var sw = el("label", "switch");
+            var box = el("input");
+            box.type = "checkbox"; box.checked = p.value === 1;
+            box.setAttribute("aria-label", (box.checked ? "Switch off: " : "Switch on: ") + p.label);
+            box.addEventListener("change", function () {
+              savePermission(p, box.checked ? 1 : 0, reasonInput, function () { box.checked = !box.checked; });
+            });
+            sw.appendChild(box);
+            sw.appendChild(el("span", "knob"));
+            li.appendChild(sw);
+          } else {
+            li.appendChild(el("span", "count", String(p.value)));
+          }
+
+          var body = el("div", "lesson-body");
+          body.appendChild(el("p", "lesson-text", p.label + ": " + shownValue(p)));
+          body.appendChild(el("p", "lesson-meta", "Reason: " + p.reason));
+          body.appendChild(el("p", "lesson-meta", "Changed by " + (p.changed_by || "nobody yet") + " · " + stamp(p.updated_at)));
+          var why = el("label", "teach-inline");
+          why.appendChild(el("span", null, p.kind === "switch" ? "Reason, then flip the switch" : "New number and reason"));
+          if (p.kind === "number") {
+            var num = el("input");
+            num.type = "number"; num.min = "0"; num.max = "100000"; num.step = "1"; num.value = String(p.value);
+            num.setAttribute("aria-label", "New value for " + p.label);
+            why.appendChild(num);
+          }
+          why.appendChild(reasonInput);
+          body.appendChild(why);
+          if (p.kind === "number") {
+            var save = el("button", "ghost small", "Save");
+            save.type = "button";
+            save.addEventListener("click", function () {
+              var n = Number(num.value);
+              if (!Number.isInteger(n) || n < 0 || n > 100000) { $("permissionsStatus").textContent = "“" + p.label + "” must be a whole number from 0 to 100000."; return; }
+              savePermission(p, n, reasonInput, null);
+            });
+            var row = el("div", "actions-row");
+            row.appendChild(save);
+            body.appendChild(row);
+          }
+          li.appendChild(body);
+          list.appendChild(li);
+        });
+        $("permissionsCount").textContent = String(res.data.length);
+        var paused = res.data.some(function (p) { return p.key === "paused" && p.value === 1; });
+        $("permissionsStatus").textContent = paused
+          ? "The agent is paused: it reads no posts and calls no AI until Paused is switched off."
+          : res.data.length + " switches and numbers. The agent reads them with every post.";
+      });
+  }
 
   loadBoard(false);
 })();

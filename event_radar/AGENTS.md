@@ -243,3 +243,42 @@ The student picks one chat app. Create that app’s reader (`supabase/functions/
 - Never put a token, a group id, a channel id, or a bot id in any file.
 
 Tell the student to check: the reader’s `GET …?check=<app>` says the token and the group or channel work; after one scheduled run `last_message_id` is set; a message posted in the group appears on the website within a minute (within seconds with GroupMe’s callback); the same message is never posted twice; **Integrations → Cron** shows `read-chat-channel`.
+
+## Permissions (Week 11)
+
+Built from `runtime/permissions-plan.md` and `runtime/permission-rules.md`. Migration: `supabase/migrations/20261108001500_agent_permissions.sql`. Every limit and every *Never* is enforced in code or in a database rule, never in the prompt alone.
+
+**Table `public.agent_permissions`**: one row per switch or number a moderator may change: `key` (primary key), `label`, `kind` (`switch` or `number`), `value` integer (a switch is 1 on / 0 off; a number is 0–100000, a CHECK), `reason` (3–300 characters, a CHECK), `changed_by`, `updated_at`, `sort`. Row-level security on; `revoke all` from `anon`, `authenticated`, and `service_role`; then `authenticated` may select and update `value, reason, changed_by, updated_at` only, with a policy whose `with check` requires `changed_by` = the signed-in email. A trigger stamps `updated_at` and refuses a new value without a newly typed reason. `service_role` (the agent) gets select only. Seeded with `on conflict (key) do nothing`:
+
+| key | label | kind | starts at |
+|---|---|---|---|
+| `paused` | Paused (the off switch) | switch | off |
+| `auto_publish` | Publish on its own | switch | on |
+| `daily_limit` | Posts per day | number | 100 |
+| `days_ahead` | Days ahead | number | 60 |
+| `new_club_wait_days` | New-club wait (days) | number | 30 |
+
+The fixed limits are constants in `submit-event`: `CLAUDE_MODEL` (`claude-haiku-5-5`), `TEST_MODELS` (`claude-haiku-5-5`, `claude-sonnet-5-5`), and `MAX_CHARS` (2000). `clubs` gains `established boolean` (the clubs on the list when this ran are established; a club added later isn't).
+
+**The agent** reads every row at the start of every post (no row, or no table: it answers 503 and doesn't act).
+- `paused` on: it stops before any lookup or AI call and answers `status: "paused"` with HTTP 503, so the chat reader keeps its bookmark and reads the message once unpaused.
+- `daily_limit`: at that many posts in 24 hours it refuses (HTTP 429, `status: "limit"`).
+- `days_ahead`: a date further out waits (R8 is decided in code now; the AI's R8 flag is ignored, and the prompt shows the current number).
+- `new_club_wait_days`: a post from a club that isn't established and joined the list within that many days waits.
+- `auto_publish` off: every post waits.
+- A reason added by a switch or a number names it and the reason the moderator typed: *(“Days ahead” is 60. The reason given: “…”)*. The first line of `looked_at` names every switch read: *Permissions: read 5 switches: Paused off, Publish on its own on, …*.
+- Never #5 in code: phone numbers, email addresses, and `@`/`$` payment handles are removed from the title, club, place detail, cost, and summary before saving; the post then waits (R6).
+
+**Test mode:** `dry_run: true` in JSON (or `dry_run=true` in a form) decides as usual but saves, uploads, and changes nothing, and answers with `dry_run: true`. Only a test-mode request may carry `model`, and only one of `TEST_MODELS`; any other model, or `model` without `dry_run`, gets HTTP 400.
+
+**Every answer** includes `ms` and `usage` `{model, input_tokens, output_tokens}` (`model` is null when no AI was called). `GET` adds `permissions` (the row count) and `switches` (key → value: true/false for a switch, a number for a number).
+
+**Database rules for the plan’s Never list:**
+1. Fill in a date, time, or place a new post didn’t give: code (`applyMemory`, Stage 12; rule 11 keeps the usual place a hint).
+2. A second live post for the same date, time, and place: the unique index `events_dedupe_key_active` (Stage 4).
+3. Change a switch or write a rule: the agent’s key has select only on `agent_permissions` and `lessons`.
+4. Delete a post: the agent has no delete code, and its key has no delete or truncate grant on `events` (moderators keep their delete for Clear the board).
+5. Show a personal phone number or payment handle: code (removed from the card), with the CHECK `events_no_contact_on_card` (NOT VALID) on published posts as a backstop.
+6. Act while paused: code (the paused check comes first), with the trigger `events_refuse_agent_when_paused` refusing the agent’s inserts and updates while Paused is on as a backstop.
+
+**The website:** a **Permissions** tab in the moderator drawer lists every row as a `.lesson` with a `.switch` (switches) or a number box (numbers), its reason, and who changed it and when. A change needs a reason typed first and saves the moderator’s email in `changed_by`. Results `paused` and `limit` are shown in the waiting colors.

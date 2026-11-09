@@ -90,6 +90,7 @@
       <div class="tabs" role="tablist" aria-label="Moderator sections">
         <button type="button" class="tab" role="tab" data-tab="waiting" aria-selected="true">Waiting <span class="count" id="waitingCount">0</span></button>
         <button type="button" class="tab" role="tab" data-tab="lessons" aria-selected="false">Lessons <span class="count" id="lessonsCount">0</span></button>
+        <button type="button" class="tab" role="tab" data-tab="permissions" aria-selected="false">Permissions <span class="count" id="permissionsCount">0</span></button>
         <button type="button" class="tab" role="tab" data-tab="tools" aria-selected="false">Tools</button>
       </div>
       <section class="tabpanel" data-panel="waiting">
@@ -106,6 +107,11 @@
         </form>
         <p id="lessonsStatus" class="muted" role="status"></p>
         <ul id="lessonsList" class="lessons"></ul>
+      </section>
+      <section class="tabpanel" data-panel="permissions" hidden>
+        <p class="muted">The agent reads these at the start of every post. A change takes effect with the next post. Type a reason first; your email is saved with it.</p>
+        <p id="permissionsStatus" class="muted" role="status"></p>
+        <ul id="permissionsList" class="lessons"></ul>
       </section>
       <section class="tabpanel" data-panel="tools" hidden>
         <h3>Clear the board</h3>
